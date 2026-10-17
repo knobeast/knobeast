@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.0.2 — 2026-10-17
+
+- Display: the periodic display check no longer makes some SH1106 panels blink every 20 seconds while idle. Full re-initialisation now happens only after a communication error.
+
 ## 2.0.1 — 2026-10-17 · first public release (community edition)
 
 - **Sonos control:**

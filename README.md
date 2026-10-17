@@ -16,7 +16,7 @@ Turn it to change the volume. Press it to pause. No phone, no tablet, no app.</p
   <a href="LICENSE"><img alt="Firmware: GPL-3.0" src="https://img.shields.io/badge/firmware-GPL--3.0-blue"></a>
   <a href="LICENSES/CERN-OHL-S-2.0.txt"><img alt="Hardware: CERN-OHL-S-2.0" src="https://img.shields.io/badge/hardware-CERN--OHL--S--2.0-green"></a>
   <a href="LICENSES/CC-BY-SA-4.0.txt"><img alt="Docs: CC BY-SA 4.0" src="https://img.shields.io/badge/docs-CC%20BY--SA%204.0-orange"></a>
-  <img alt="Version 2.0.1" src="https://img.shields.io/badge/version-2.0.1-black">
+  <img alt="Version 2.0.2" src="https://img.shields.io/badge/version-2.0.2-black">
 </p>
 
 ![knobeast on a sideboard next to a turntable](docs/img/render_salon.jpg)

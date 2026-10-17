@@ -25,7 +25,7 @@ class SH1106:
 
     def init(self, full=True):
         """Envía toda la configuración y enciende. Devuelve False si la pantalla no contesta.
-        full=False: sin apagarla antes (para el repaso periódico, que así no parpadea)."""
+        Solo al arrancar y después de un error de comunicación."""
         seg, com = (0xA0, 0xC0) if self.rotate180 else (0xA1, 0xC8)
         try:
             if full:
@@ -41,6 +41,22 @@ class SH1106:
             self.errors += 1
             return False
 
+    def refresh(self):
+        """Repaso periódico SIN parpadeo: solo reenvía lo que no altera la imagen (orientación,
+        contraste, modo normal y encendido). Si la pantalla se hubiera reiniciado sola, con esto
+        vuelve a verse. Los ajustes de reloj, carga y tensiones (D5, AD, D9, DB) no se repiten,
+        porque en algunos paneles reenviarlos produce un parpadeo visible."""
+        seg, com = (0xA0, 0xC0) if self.rotate180 else (0xA1, 0xC8)
+        try:
+            for c in (seg, com, 0x81, self._c if self._c is not None else 0xCF, 0xA4, 0xA6,
+                      0xAF if self.on else 0xAE):
+                self.cmd(c)
+            self._last_init = ticks_ms()
+            return True
+        except OSError:
+            self.errors += 1
+            return False
+
     def cmd(self, c):
         self.i2c.writeto(self.addr, bytes((0x00, c)))
 
@@ -49,9 +65,12 @@ class SH1106:
         self.ok = self.init()
 
     def show(self):
-        # cada 20 s, repetir la configuración por si la pantalla se ha reiniciado sola
-        if not self.ok or ticks_diff(ticks_ms(), self._last_init) > 20000:
-            self.ok = self.init(full=not self.ok)
+        if not self.ok:                      # tras un error de comunicación: configuración completa
+            self.ok = self.init()
+            if not self.ok:
+                return
+        elif ticks_diff(ticks_ms(), self._last_init) > 20000:
+            self.ok = self.refresh()         # cada 20 s, repaso ligero por si se reinició sola
             if not self.ok:
                 return
         try:
