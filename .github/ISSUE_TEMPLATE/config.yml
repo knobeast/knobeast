@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Security vulnerability
+    url: https://github.com/knobeast/knobeast/blob/main/SECURITY.md
+    about: Please email security@knobeast.com instead of opening a public issue.
+  - name: Buy a ready-made knobeast / general questions
+    url: https://knobeast.com
+    about: Official website. Email contact@knobeast.com for anything else.

@@ -1,0 +1,26 @@
+# Never commit / nunca subir
+firma/
+*.key
+*.pem
+publicado/
+.servidor.json
+mandos.csv
+pico/clave.py
+firmware.uf2
+__pycache__/
+*.pyc
+.DS_Store
+render3d/stl/
+render3d/out/
+marca/RussoOne-Regular.ttf
+# private, not part of the open project
+knobeast-servidor.sh
+web/
+web_src/
+LEEME.md
+caja/sonos_knob_caja.scad
+caja/1_carcasa.stl
+caja/2_tapa_inferior.stl
+imagenes/
+RETOMAR.md
+copia_seguridad.sh
