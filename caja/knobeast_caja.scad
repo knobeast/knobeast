@@ -48,9 +48,17 @@ oled_w = 35.9;  oled_h = 33.9;
 oled_cx = L / 2;
 s_c   = W / cos(theta) - 19.5;   // centro del módulo, pegado al borde de arriba (~15 mm entre pomo y ventana)
 win_w = 31;  win_h = 17;  win_off = 1.0;
-frame_h = 4.0;
+frame_h = 4.6;
+// Pines de la pantalla hacia ABAJO (hacia el pomo), el flex hacia arriba; el programa gira la imagen
+// (OLED_ROTATE_180 = True). El cristal va ~1 mm desplazado hacia los pines: la ventana ya lo tiene en cuenta.
+// Los cables salen por el hueco del marco de abajo. Sujeción: el borde de los pines entra ladeado en
+// 2 ranuras con pestaña y el de arriba se atornilla en 2 pivotes (M2). Abajo NO hay pivotes: tocaban el cristal.
 oled_hole_dx = 30.5;  oled_hole_dy = 28.5;   // ¡mide los tuyos!
-oled_glass = 1.6;  oled_post_d = 4.6;  oled_pilot = 1.6;   // tornillos M2 x 5
+oled_glass = 1.6;  oled_post_d = 4.2;  oled_pilot = 1.6;   // tornillos M2 x 5
+oled_pcb = 1.2;          // grosor del PCB de la pantalla (mídelo: 1,0-1,2)
+slot_lip = 1.2;          // cuánto montan las pestañas sobre el borde del PCB
+slot_x0  = 13;           // las ranuras empiezan a 13 mm del centro (deja libres los cables)
+glass_w = 34.5;  glass_h = 23;  glass_t = 1.45;  glass_off = -1.2;   // cristal (solo para comprobar)
 
 // ---------- Raspberry Pi Pico 2 W (51 x 21), detrás a la izquierda ----------
 pico_l = 51;  pico_w = 21;
@@ -74,9 +82,9 @@ plug_top  = usb_z + 4.6;         // techo del hueco
 cable_ch  = 5.6;                 // canal del cable hasta la trasera
 hood_t    = 1.6;
 
-// ---------- Interruptor KCD11 en la trasera (arriba cuando está en la pared) ----------
+// ---------- Interruptor redondo en la trasera (arriba cuando está en la pared) ----------
 sw_x = 16;  sw_z = 22;
-sw_cut = [8.8, 13.2];
+sw_hole_d = 12;          // taladro redondo de 12 mm
 
 // ---------- Rótulo opcional en la cara (vacío = sin rótulo) ----------
 label = [];               // ejemplo: [["Sandrita", 4.5, 82]]  -> [texto, tamaño, posición a lo largo de la cara]
@@ -141,17 +149,26 @@ module shell() {
                 cavity();
                 for (p = boss_pos) translate([p[0], p[1], 0]) cylinder(d = boss_d, h = 100);
             }
-            // marco de la pantalla
+            // marco de la pantalla (hueco abajo para los cables de los pines)
             on_face() translate([oled_cx, s_c, 0]) difference() {
                 translate([0, 0, -frame_h / 2 + 0.3]) cube([oled_w + 0.6 + 3.2, oled_h + 0.6 + 3.2, frame_h], center = true);
                 translate([0, 0, -frame_h / 2 - 0.5]) cube([oled_w + 0.6, oled_h + 0.6, frame_h + 1], center = true);
-                translate([0, (oled_h + 2) / 2, -frame_h / 2 - 0.5]) cube([16, 4, frame_h + 1], center = true);
+                translate([0, -(oled_h + 2) / 2, -frame_h / 2 - 0.5]) cube([24, 4, frame_h + 1], center = true);
             }
-            // pivotes de los tornillos de la pantalla
+            // ranuras de abajo: tope por el lado de la cara + pestaña por detrás del PCB
             on_face() translate([oled_cx, s_c, 0])
-                for (sx = [-1, 1], sy = [-1, 1])
-                    translate([sx * oled_hole_dx / 2, sy * oled_hole_dy / 2, -oled_glass])
-                        cylinder(d = oled_post_d, h = oled_glass + 0.02);
+                for (sx = [-1, 1]) {
+                    x0 = sx > 0 ? slot_x0 : -(oled_w + 0.6) / 2 - 0.5;
+                    xl = (oled_w + 0.6) / 2 - slot_x0 + 0.5;
+                    y0 = -(oled_h + 0.6) / 2 - 0.5;
+                    translate([x0, y0, -oled_glass]) cube([xl, slot_lip + 0.5, oled_glass + 0.3]);
+                    translate([x0, y0, -frame_h + 0.3]) cube([xl, slot_lip + 0.5, frame_h - 0.3 - oled_glass - oled_pcb - 0.3]);
+                }
+            // pivotes de los tornillos de la pantalla: solo los 2 de arriba (lado del flex)
+            on_face() translate([oled_cx, s_c, 0])
+                for (sx = [-1, 1])
+                    translate([sx * oled_hole_dx / 2, oled_hole_dy / 2, -oled_glass])
+                        cylinder(d = oled_post_d, h = oled_glass + 0.3);
         }
         for (p = boss_pos) translate([p[0], p[1], -1]) cylinder(d = pilot_d, h = 13);
 
@@ -160,10 +177,12 @@ module shell() {
             translate([0, 0, (top_t - 1.1) / 2 - 0.5]) cube([win_w, win_h, top_t - 1.1 + 1], center = true);
             translate([0, 0, top_t + 0.3]) cube([win_w + 2.6, win_h + 2.6, 0.2], center = true);
         }
+        // rebajes por dentro de la cara: abajo para las puntas de los pines, arriba para el flex
         on_face() translate([oled_cx - 7.5, s_c - oled_h / 2 - 0.3, -0.01]) cube([15, 5.8, top_t - 1.4]);
+        on_face() translate([oled_cx - 8, s_c + oled_h / 2 + 0.3 - 5.8, -0.01]) cube([16, 5.8, top_t - 1.4]);
         on_face() translate([oled_cx, s_c, 0])
-            for (sx = [-1, 1], sy = [-1, 1])
-                translate([sx * oled_hole_dx / 2, sy * oled_hole_dy / 2, -oled_glass - 0.5])
+            for (sx = [-1, 1])
+                translate([sx * oled_hole_dx / 2, oled_hole_dy / 2, -oled_glass - 0.5])
                     cylinder(d = oled_pilot, h = oled_glass + 0.5 + top_t - 0.8, $fn = 20);
 
         for (ln = label)
@@ -183,7 +202,7 @@ module shell() {
         translate([usb_x, W - 1, usb_z + 2.8 - cable_ch / 2]) rotate([-90, 0, 0]) cylinder(d = cable_ch, h = wall + 2);
 
         // interruptor en la trasera + rebaje interior
-        translate([sw_x - sw_cut[0] / 2, W - 1, sw_z - sw_cut[1] / 2]) cube([sw_cut[0], wall + 2, sw_cut[1]]);
+        translate([sw_x, W - 1, sw_z]) rotate([-90, 0, 0]) cylinder(d = sw_hole_d, h = wall + 2);
         translate([sw_x - 7.5, W - 0.01, sw_z - 9]) cube([15, wall - 1.6 + 0.01, 18]);
     }
 }
@@ -300,13 +319,15 @@ module ghost_plug(cable = true) {
     if (cable) translate([usb_x, port_y + 20, usb_z]) rotate([-90, 0, 0]) cylinder(d = 4, h = W - port_y - 20 + 25);
 }
 module ghost_battery() translate([bat_x, bat_y, 0]) cube([bat_l, bat_w, bat_t]);
-module ghost_switch() translate([sw_x - 7.5, W - 15, sw_z - 5]) cube([15, 15, 10]);
-module ghost_oled() on_face() translate([oled_cx, s_c, 0]) {
-    translate([0, 0, -1.6 / 2]) cube([oled_w - 1, 23, 1.6], center = true);
-    translate([0, 0, -1.6 - 1.6 / 2]) cube([oled_w, oled_h, 1.6], center = true);
-    translate([0, 0, -3.2 - 1]) cube([oled_w - 6, oled_h - 8, 2], center = true);
-    translate([0, -oled_h / 2 + 2.5, -3.2 - 6]) cube([10.5, 2.6, 12], center = true);   // pines + cables
+module ghost_switch() translate([sw_x, W - 15, sw_z]) rotate([-90, 0, 0]) cylinder(d = 14, h = 15);
+module ghost_glass() on_face() translate([oled_cx, s_c + glass_off, -glass_t / 2 - 0.05])
+    cube([glass_w, glass_h, glass_t], center = true);
+module ghost_oled_pcb() on_face() translate([oled_cx, s_c, 0]) {
+    translate([0, 0, -oled_glass - oled_pcb / 2]) cube([oled_w, oled_h, oled_pcb], center = true);
+    translate([0, 0, -oled_glass - oled_pcb - 1]) cube([oled_w - 8, oled_h - 12, 2], center = true);
+    translate([0, -oled_h / 2 + 2.5, -oled_glass - oled_pcb - 6]) cube([10.5, 2.6, 12], center = true);   // pines + cables
 }
+module ghost_oled() { ghost_glass(); ghost_oled_pcb(); }
 // KY-040 girado: los pines hacia la derecha
 module ghost_encoder() on_face() translate([knob_x, knob_s, 0]) {
     translate([0, 0, top_t]) cylinder(d = 7, h = 7 - top_t);
@@ -338,6 +359,8 @@ else if (part == "knob")    knob();
 else if (part == "wall")    wall_bracket();
 else if (part == "placed_knob")   placed_knob();
 else if (part == "ghost_oled")    ghost_oled();
+else if (part == "ghost_glass")   ghost_glass();
+else if (part == "ghost_oled_pcb") ghost_oled_pcb();
 else if (part == "ghost_encoder") ghost_encoder();
 else if (part == "ghost_pico")    ghost_pico();
 else if (part == "ghost_charger") ghost_charger();

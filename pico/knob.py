@@ -1,6 +1,6 @@
 # knob.py — el mando: entradas, pantalla, wifi y bucle principal. Lo arranca main.py.
 from machine import Pin, I2C, ADC, disable_irq, enable_irq, reset
-from time import ticks_ms, ticks_diff, sleep_ms
+from time import ticks_ms, ticks_diff, sleep_ms, sleep_us
 import network
 import config as cfg
 import settings
@@ -44,7 +44,10 @@ class Inputs:
         return n
 
     def events(self):
-        """enc_short al soltar; enc_long al llegar a LONG_MS; enc_menu al llegar a MENU_MS."""
+        """enc_short al soltar; enc_long al llegar a LONG_MS; enc_rooms al soltar tras HOLD_ROOMS_MS;
+        enc_menu al llegar a HOLD_MENU_MS (sin soltar)."""
+        rooms_ms = getattr(cfg, "HOLD_ROOMS_MS", 2000)
+        menu_ms = getattr(cfg, "HOLD_MENU_MS", 4000)
         out = []
         now = ticks_ms()
         for name, pin in self.buttons:
@@ -58,12 +61,15 @@ class Inputs:
                 if self._fired[name] < 1 and held >= cfg.LONG_MS:
                     self._fired[name] = 1
                     out.append(name + "_long")
-                if self._fired[name] < 2 and held >= cfg.MENU_MS:
+                if self._fired[name] < 2 and held >= menu_ms:
                     self._fired[name] = 2
                     out.append(name + "_menu")
             elif t0 is not None:
-                if not self._fired[name] and ticks_diff(now, t0) >= 30:
+                held = ticks_diff(now, t0)
+                if not self._fired[name] and held >= 30:
                     out.append(name + "_short")
+                elif self._fired[name] == 1 and held >= rooms_ms:
+                    out.append(name + "_rooms")
                 self._down[name] = None
         return out
 
@@ -74,6 +80,37 @@ class Inputs:
         return ticks_diff(ticks_ms(), t0)
 
 
+def quick_adc(pin_no, n=8):
+    """Tensión de un pin ADC (GP26-28) leída justo después de descargarlo a 0 V.
+    Un pin al aire se queda en ~0 V; con un divisor de resistencias vuelve a su tensión en
+    microsegundos. Así se sabe si hay resistencias sin depender de un pin flotante."""
+    Pin(pin_no, Pin.OUT, value=0)
+    sleep_us(20)
+    a = ADC(Pin(pin_no))                 # vuelve a modo analógico (sin pull ni entrada digital)
+    t = 0
+    for _ in range(n):
+        t += a.read_u16()
+    return t / n * 3.3 / 65535
+
+
+def battery_pins(c):
+    """Pines de batería y carga: los de config.py o, si están en None, detectados solos
+    (divisor 100k/100k en GP26 y divisor de carga en GP27, como en todos los montajes nuevos)."""
+    pin = getattr(c, "BATTERY_PIN", None)
+    chg = getattr(c, "CHARGE_PIN", None)
+    if pin is None and getattr(c, "BATTERY_AUTO", True):
+        try:
+            v = quick_adc(26) * getattr(c, "BATTERY_RATIO", 2.0)
+            print("Bateria auto: GP26 = %.2f V" % v)
+            if 2.8 <= v <= 5.6:          # VSYS real: hay divisor
+                pin = 26
+                if chg is None:
+                    chg = 27
+        except Exception as e:
+            print("Bateria auto:", e)
+    return pin, chg
+
+
 class Battery:
     """Porcentaje aproximado de una LiPo a partir de su tensión (divisor en un pin ADC)."""
     CURVE = ((4.20, 100), (4.10, 90), (4.00, 80), (3.90, 66), (3.80, 50), (3.75, 40),
@@ -82,11 +119,16 @@ class Battery:
     def __init__(self, pin, ratio, charge_pin=None):
         self.adc = ADC(Pin(pin)) if pin is not None else None
         self.ratio = ratio
-        # USB-C enchufado: divisor desde IN+ del cargador (5 V -> ~3,3 V) a un pin
-        self.chg = Pin(charge_pin, Pin.IN) if charge_pin is not None else None
+        # USB-C enchufado: divisor desde IN+ del cargador (5 V -> ~3,3 V) a un pin.
+        # En GP26-28 se lee como analógico tras descargarlo: sin resistencias da "no carga", no basura.
+        self.chg_pin = charge_pin
+        self.chg_adc = charge_pin in (26, 27, 28)
+        self.chg = Pin(charge_pin, Pin.IN) if charge_pin is not None and not self.chg_adc else None
 
     def charging(self):
         """True = cargador enchufado, False = con batería, None = no se sabe (sin cable al pin)."""
+        if self.chg_adc:
+            return quick_adc(self.chg_pin, 4) > 1.6
         if self.chg is None:
             return None
         return self.chg.value() == 1
@@ -126,6 +168,7 @@ class Net:
         self.w = network.WLAN(network.STA_IF)
         self.w.active(True)
         self._last = None
+        self._ssid = None          # nombre real de la red si el guardado no coincide (espacios)
 
     def connected(self):
         return self.w.isconnected()
@@ -136,12 +179,28 @@ class Net:
         if self._last is not None and ticks_diff(now, self._last) < 15000:
             return
         self._last = now
-        print("Conectando a", c.WIFI_SSID)
+        ssid = self._ssid or c.WIFI_SSID
+        try:
+            if self.w.status() == -2 and self._ssid is None:     # "red no encontrada"
+                self._ssid = self._match(c.WIFI_SSID)
+                ssid = self._ssid or ssid
+        except Exception as e:
+            print("scan:", e)
+        print("Conectando a %r" % ssid)
         try:
             self.w.disconnect()
         except Exception:
             pass
-        self.w.connect(c.WIFI_SSID, c.WIFI_PASS)
+        self.w.connect(ssid, c.WIFI_PASS)
+
+    def _match(self, ssid):
+        """Busca una red cuyo nombre solo cambie en espacios al principio/final (p. ej. "CasaIndiana ")."""
+        for n in self.w.scan():
+            name = n[0].decode() if isinstance(n[0], bytes) else n[0]
+            if name != ssid and name.strip() == ssid.strip():
+                print("Red con otro nombre exacto: %r" % name)
+                return name
+        return None
 
 
 def start(recovery=False, confirm=None):
@@ -149,9 +208,9 @@ def start(recovery=False, confirm=None):
     # 200 kHz: más tolerante con cables largos o soldaduras justas que 400 kHz
     i2c = I2C(0, sda=Pin(cfg.PIN_SDA), scl=Pin(cfg.PIN_SCL), freq=getattr(cfg, "I2C_FREQ", 200000))
     display = SH1106(i2c, rotate180=cfg.OLED_ROTATE_180)
-    chg_pin = getattr(cfg, "CHARGE_PIN", None)
-    battery = (Battery(cfg.BATTERY_PIN, cfg.BATTERY_RATIO, chg_pin)
-               if cfg.BATTERY_PIN is not None or chg_pin is not None else None)
+    bat_pin, chg_pin = battery_pins(cfg)
+    battery = (Battery(bat_pin, getattr(cfg, "BATTERY_RATIO", 2.0), chg_pin)
+               if bat_pin is not None or chg_pin is not None else None)
     inputs = Inputs()
     try:                                      # pantalla de arranque cuanto antes
         import ui

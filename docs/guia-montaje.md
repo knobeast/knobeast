@@ -13,13 +13,13 @@ Esta guía explica cómo montar un knobeast desde cero: las piezas, el cableado,
 | Raspberry Pi Pico 2 W | Con wifi. El programa está hecho y probado para la Pico 2 W (RP2350) |
 | Encoder rotativo KY-040 | Con pulsador. Eje en «D» de 6 mm (o moleteado: cambia `shaft` en el `.scad`) |
 | Pantalla OLED 1,3" SH1106, I²C | La de 4 pines (VCC, GND, SCL, SDA), 128 × 64 |
-| 4 tornillos M2 × 5 autorroscantes | Para sujetar la pantalla desde dentro |
+| 2 tornillos M2 × 5 autorroscantes | Para sujetar la pantalla desde dentro |
 | 4 tornillos M3 × 8 avellanados | Para cerrar la tapa inferior |
 | 4 patas de goma Ø10 mm | Opcional |
 | Cable fino, soldador y estaño | |
 
 **Versión con batería**
-- Cargador TP4056 con USB-C (17 × 26 mm, tipo HW-373, con protección);
+- Cargador TP4056 con USB-C (17 × 26 mm, tipo HW-373, con protección). **Elige uno con las dos resistencias de 5,1 kΩ en las patillas CC del USB-C** (marcadas «512» junto al conector): muchas HW-373 no las llevan y entonces no cargan con cables y cargadores USB-C a USB-C, solo con USB-A a USB-C;
 - batería LiPo 802540 de 1000 mAh;
 - interruptor mini KCD11 (hueco de 8,8 × 13,2 mm).
 
@@ -86,11 +86,11 @@ Los pads **IN+ / IN−** del cargador no se usan para alimentar: la corriente en
 
 **% de batería (opcional)**
 
-VSYS (pin 39) → 100 kΩ → **GP26 (pin 31)** → 100 kΩ → GND (pin 33). En `pico/config.py`, pon `BATTERY_PIN = 26`.
+VSYS (pin 39) → 100 kΩ → **GP26 (pin 31)** → 100 kΩ → GND (pin 33). El programa la detecta solo (desde la 2.0.3): no hay que tocar `pico/config.py`.
 
 **Aviso de carga (opcional)**
 
-Pad **IN+** del cargador → 10 kΩ → **GP27 (pin 32)** → 20 kΩ → GND (pin 33). En `pico/config.py`, pon `CHARGE_PIN = 27`. Con el USB-C enchufado, la pila de la pantalla sale con un rayo.
+Pad **IN+** del cargador → 10 kΩ → **GP27 (pin 32)** → 20 kΩ → GND (pin 33). También se detecta solo. Con el USB-C enchufado, la pila de la pantalla sale con un rayo.
 
 ## 4. Probar desde el ordenador (opcional)
 
@@ -134,7 +134,7 @@ Después, para copiar solo el programa: `bash instalar_mac.sh --solo-programa`. 
 
 La contraseña de la red de configuración se crea en el primer arranque y no cambia nunca. Se puede imprimir en una pegatina debajo de la caja.
 
-**Menú:** mantén la rueda pulsada 5 s. Gira para elegir y pulsa para entrar.
+**Altavoces y menú:** mantén la rueda pulsada y sale una barra. Si sueltas pasados **2 s**, eliges altavoces; si sigues hasta los **4 s**, se abre el menú. Gira para elegir y pulsa para entrar; el menú acaba en *Volver*.
 - **Altavoces:** marca uno o varios altavoces o grupos y pulsa **Guardar**.
   - **G1, G2…:** habitaciones agrupadas en Sonos.
   - **?:** elegida, pero ahora no aparece.
@@ -206,7 +206,7 @@ En el `.scad` también puedes cambiar la inclinación (`theta`), añadir un rót
 
 ![Por dentro](img/case_cutaway.png)
 
-1. **Pantalla:** en su marco, con el cristal hacia la ventana y los pines hacia el pomo. Atorníllala desde dentro con los 4 M2 × 5 y aprieta con suavidad.
+1. **Pantalla:** cristal hacia la ventana, **pines y cables hacia el pomo**, con los cables por el hueco del marco. Inclínala, mete el borde de los pines bajo las dos pestañas de las esquinas, baja el otro borde sobre los dos pivotes y fíjala con los 2 tornillos M2 × 5. Aprieta con suavidad: tiene que entrar sin forzar.
 2. **Encoder:** el eje por su agujero, con los pines del KY-040 hacia la derecha. Apriétalo con su tuerca por fuera y pon el pomo a presión.
 3. **Interruptor:** a presión en el hueco de la parte trasera.
 4. **Tapa inferior:**

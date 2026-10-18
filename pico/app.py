@@ -12,8 +12,9 @@ POLL_ORDER = ("volume", "mute", "state", "title")
 class App:
     def __init__(self, cfg, display, inputs, net, sonos=None, log=print, battery=None, hooks=None):
         self.cfg, self.disp, self.inp, self.net, self.log = cfg, display, inputs, net, log
-        rooms = getattr(cfg, "ROOMS", None) or [getattr(cfg, "ROOM", "Comedor")]
+        rooms = getattr(cfg, "ROOMS", None) or []      # vacío = aún no se han elegido altavoces
         self.sonos = sonos or Rooms(rooms)
+        self.asked_rooms = False    # ya se abrió sola la lista de altavoces (sin altavoces elegidos)
         self.st = {"room": self.sonos.room, "mode": "wifi", "volume": None, "mute": False,
                    "state": "STOPPED", "title": "", "detail": "", "battery": None, "charging": None}
         self.battery = battery
@@ -145,12 +146,7 @@ class App:
                 raise Exception("%s no responde" % self.sonos.room)
             self.st["room"] = self.sonos.room
             self.st["mode"] = "ok"
-            ok = self.hooks.pop("ok", None)     # primera vez que controla Sonos: versión buena
-            if ok:
-                try:
-                    ok()
-                except Exception as e:
-                    self.log("confirmar: %r" % (e,))
+            self.confirm_ok()                   # primera vez que controla Sonos: versión buena
             self.st["detail"] = ""
             self.st["volume"] = vol
             self.fails = 0
@@ -204,7 +200,8 @@ class App:
                 shift = (now // 120000) % 3          # siempre encendida: mover 0-2 px para no marcar la pantalla
             ui.render(self.disp.fb, self.st, now, shift)
             if self.hold > 0:
-                ui.render_hold(self.disp.fb, self.hold, self.cfg.MENU_MS)
+                ui.render_hold(self.disp.fb, self.hold, getattr(self.cfg, "HOLD_ROOMS_MS", 2000),
+                               getattr(self.cfg, "HOLD_MENU_MS", 4000))
         self.disp.show()
         self.dirty = False
         self.next_draw = ticks_add(now, 100)
@@ -241,14 +238,15 @@ class App:
             def secs(v):
                 return t("never") if v <= 0 else ("%d s" % v if v < 60 else "%d min" % (v // 60))
             upd = [("update", t("m_update")), ("auto", t("s_auto_on" if auto else "s_auto_off"))] if self.ota_url() else []
-            return t("sys_title"), upd + [("dim", t("s_dim", secs(self.screen_dim()))),
+            return t("sys_title"), upd + [("step", t("s_step", getattr(self.cfg, "VOL_STEP", 1))),
+                                    ("dim", t("s_dim", secs(self.screen_dim()))),
                                     ("screen", t("s_screen", secs(self.screen_off()))),
                                     ("info", t("s_info")), ("reset", t("s_reset")), ("reboot", t("m_reboot")),
                                     ("back", t("s_back"))]
         if k == "reset":
             return t("reset_title"), [("no", t("reset_no")), ("yes", t("reset_yes"))]
         return t("menu"), [("rooms", t("m_rooms")), ("lang", t("m_lang")), ("setup", t("m_setup")),
-                           ("system", t("m_system"))]
+                           ("system", t("m_system")), ("exit", t("s_back"))]
 
     def open_menu(self, kind, now, sel=0):
         self.menu_kind, self.menu, self.menu_t = kind, sel, now
@@ -279,6 +277,13 @@ class App:
                 self.save_setting("AUTO_UPDATE", on)
                 self.info(t("sys_title"), t("s_auto_on" if on else "s_auto_off"), "", 900)
                 return                                   # sigue en el menú Sistema
+            if what == "step":
+                opts = (1, 2, 3, 5)
+                cur = getattr(self.cfg, "VOL_STEP", 1)
+                nxt = opts[(opts.index(cur) + 1) % len(opts)] if cur in opts else opts[0]
+                self.cfg.VOL_STEP = nxt
+                self.save_setting("VOL_STEP", nxt)
+                return                                   # sigue en el menú Sistema, con el valor nuevo
             if what in ("screen", "dim"):
                 key, opts = (("SCREEN_OFF", (0, 300, 60, 30)) if what == "screen"
                              else ("SCREEN_DIM", (15, 30, 60, 0)))
@@ -298,6 +303,8 @@ class App:
                 self.open_menu("system", now, [k for k, _ in self.menu_items()[1]].index("reset"))
                 return
             self.menu = None
+            if what == "exit":                       # cerrar el menú sin hacer nada
+                return
             if what == "yes":
                 self.factory_reset()
                 return
@@ -320,6 +327,15 @@ class App:
         if ticks_diff(now, self.menu_t) > self.cfg.MENU_TIMEOUT * 1000:
             self.menu = None
             self.dirty = True
+
+    def confirm_ok(self):
+        """Da por buena la versión instalada (si se acaba de actualizar, ya no se vuelve a la anterior)."""
+        ok = self.hooks.pop("ok", None)
+        if ok:
+            try:
+                ok()
+            except Exception as e:
+                self.log("confirmar: %r" % (e,))
 
     def save_setting(self, key, value):
         try:
@@ -594,7 +610,7 @@ class App:
             steps = -steps
         events = self.inp.events()
         held = self.inp.held("enc") if hasattr(self.inp, "held") else 0
-        hold = (held if held >= 1000 and self.menu is None and self.picker is None and self.langsel is None
+        hold = (held if held >= 600 and self.menu is None and self.picker is None and self.langsel is None
                 else 0)
         if hold != self.hold:
             self.hold = hold
@@ -605,6 +621,14 @@ class App:
             self.splash_step(now, steps, events)
             if not self.splash:
                 steps, events = 0, []                # el primer toque solo quita la pantalla de arranque
+        if ("enc_rooms" in events and self.menu is None and self.picker is None
+                and self.langsel is None):               # soltar tras 2 s: elegir altavoces
+            self.hold = 0
+            self.pending = 0
+            self.wake(now)
+            self.open_picker(now)
+            self.draw(now, force=True)
+            return
         if "enc_menu" in events:
             self.menu, self.menu_kind, self.menu_t, self.hold, self.picker, self.langsel = 0, "main", now, 0, None, None
             self.pending = 0
@@ -634,6 +658,9 @@ class App:
             self.wake(now)
         for ev in events:
             self.wake(now)
+            if ev == "enc_short" and not self.sonos.rooms:   # sin altavoces: pulsar abre la lista
+                self.open_picker(now)
+                continue
             action = self.cfg.ACTIONS.get(ev)
             if action:
                 self.do(action, now)
@@ -654,6 +681,18 @@ class App:
             self.st["mode"] = "search"
             self.st["detail"] = ""
             self.next_locate = now
+
+        if not self.sonos.rooms:                     # recién restablecido: que elija sus altavoces
+            if self.st["mode"] != "norooms":
+                self.st.update({"mode": "norooms", "room": "", "detail": "", "volume": None})
+                self.dirty = True
+                self.confirm_ok()                    # arranca y conecta a la wifi: versión buena
+            if not self.asked_rooms:
+                self.asked_rooms = True
+                self.splash = False
+                self.open_picker(now)
+            self.draw(now)
+            return
 
         if self.sonos.ip is None:
             self.pending = 0

@@ -148,10 +148,16 @@ def message_page(title, text, back=True):
             % (title, text, "<p><a href='/' style='color:#e8b04a'>%s</a></p>" % t("p_back") if back else ""))
 
 
-def handle_form(cfg, form):
-    ssid = (form.get("ssid_txt") or "").strip() or (form.get("ssid_sel") or "").strip()
-    if not ssid:
+def handle_form(cfg, form, networks=()):
+    # Ojo: los espacios del principio o del final SON parte del nombre de una wifi ("CasaIndiana ").
+    # El de la lista se guarda tal cual; el escrito a mano se ajusta al de la lista si solo cambian espacios.
+    txt = form.get("ssid_txt") or ""
+    ssid = txt if txt.strip() else (form.get("ssid_sel") or "")
+    if not ssid.strip():
         return None
+    names = [n for n, _ in networks]
+    if ssid not in names:
+        ssid = next((n for n in names if n.strip() == ssid.strip()), ssid.strip())
     new = {"WIFI_SSID": ssid}
     pw = form.get("pass") or ""
     if pw or ssid != cfg.WIFI_SSID:
@@ -370,7 +376,7 @@ def run(cfg, disp, inputs, sta, ap, reset, http_port=80, dns_port=53, log=print)
                                 return
                             show(t("st_phone"))
                         elif method == "POST" and path.startswith("/guardar"):
-                            ssid = handle_form(cfg, parse_form(_read_body(cl, hdrs, body)))
+                            ssid = handle_form(cfg, parse_form(_read_body(cl, hdrs, body)), networks)
                             if ssid:
                                 _send(cl, "200 OK", done_page(ssid))
                                 cl.close()

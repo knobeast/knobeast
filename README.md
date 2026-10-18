@@ -16,7 +16,7 @@ Turn it to change the volume. Press it to pause. No phone, no tablet, no app.</p
   <a href="LICENSE"><img alt="Firmware: GPL-3.0" src="https://img.shields.io/badge/firmware-GPL--3.0-blue"></a>
   <a href="LICENSES/CERN-OHL-S-2.0.txt"><img alt="Hardware: CERN-OHL-S-2.0" src="https://img.shields.io/badge/hardware-CERN--OHL--S--2.0-green"></a>
   <a href="LICENSES/CC-BY-SA-4.0.txt"><img alt="Docs: CC BY-SA 4.0" src="https://img.shields.io/badge/docs-CC%20BY--SA%204.0-orange"></a>
-  <img alt="Version 2.0.2" src="https://img.shields.io/badge/version-2.0.2-black">
+  <img alt="Version 2.0.6" src="https://img.shields.io/badge/version-2.0.6-black">
 </p>
 
 ![knobeast on a sideboard next to a turntable](docs/img/render_salon.jpg)
@@ -27,7 +27,7 @@ knobeast is a small box with a **big dial** and a **little screen** that control
 
 - **Turn** the dial to change the volume, one step at a time.
 - **Press** it to pause or resume.
-- **Hold** it to open the menu.
+- **Hold** it 2 s to pick speakers, 4 s to open the menu.
 - **The screen** shows the room, the volume and what's playing.
 
 It is a **minimalist, physical way to control your music** that doesn't depend on a phone or a tablet. Anyone in the family can use it, including kids, grandparents and guests: nobody needs the app, an account or a password.
@@ -127,6 +127,8 @@ PLA, 0.2 mm layers, no supports.
 | `publicar_actualizacion.py` | Signs a release and publishes it to your own update server |
 | `prueba_mac.py` | Finds your Sonos rooms and tests volume control from a computer |
 | `diagnostico_mac.sh` | 25-second USB diagnostic run |
+| `prueba_wifi_mac.sh` | USB Wi-Fi test: networks seen, saved name and the exact connection error |
+| `prueba_bateria_mac.sh` | USB test of the battery and charging resistors |
 
 The code comments and the Spanish UI texts come first because the project was born in Spain. English translations of comments are welcome.
 

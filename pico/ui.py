@@ -97,7 +97,8 @@ def render(fb, st, now_ms, shift=0):
     if mode != "ok":
         msg = {"wifi": (t("connecting1"), t("connecting2")),
                "search": (t("searching1"), (room[:12] + "...")),
-               "error": (t("noconn1"), t("noconn2"))}.get(mode, ("", ""))
+               "error": (t("noconn1"), t("noconn2")),
+               "norooms": (t("norooms1"), t("norooms2"))}.get(mode, ("", ""))
         m0 = fold(msg[0])
         if len(m0) <= 8:
             big_text(fb, m0, shift, 18, 2)
@@ -246,16 +247,28 @@ def render_info(fb, title, line1, line2=""):
     fb.text(fold(line2)[:16], 0, 40, 1)
 
 
-def render_hold(fb, ms, total):
-    """Barra de 'mantén pulsado' encima de lo que haya en pantalla."""
+def render_hold(fb, ms, rooms_ms, total):
+    """Barra de 'mantén pulsado' encima de lo que haya en pantalla: a los 2 s, soltar abre
+    los altavoces; a los 4 s se abre el menú. Lo que pasaría al soltar sale resaltado."""
     fb.fill_rect(6, 16, 116, 34, 0)
     fb.rect(6, 16, 116, 34, 1)
-    h = fold(t("hold"))
-    fb.text(h, 64 - 4 * len(h), 21, 1)
+    a = fold(t("hold_rooms"))[:9]
+    m = fold(t("hold"))[:5]
+    xa, xm = 10, 118 - 8 * len(m)
+    if rooms_ms <= ms < total:
+        fb.fill_rect(xa - 2, 20, 8 * len(a) + 3, 10, 1)
+        fb.text(a, xa, 21, 0)
+    else:
+        fb.text(a, xa, 21, 1)
+    fb.text(m, xm, 21, 1)
     fb.rect(14, 34, 100, 10, 1)
     w = 98 * min(ms, total) // total
     if w > 0:
         fb.fill_rect(15, 35, w, 8, 1)
+    xt = 15 + 98 * rooms_ms // total            # marca de los 2 s
+    fb.vline(xt, 32, 14, 1)
+    if w >= xt - 15:
+        fb.vline(xt, 35, 8, 0)
 
 
 def render_setup(fb, ap_name, ap_pass, status, page=0, qrm=None):

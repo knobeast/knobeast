@@ -21,8 +21,12 @@ def apply(cfg):
     for k, v in d.items():
         if k in KEYS:
             setattr(cfg, k, v)
+    # "Comedor" era el valor de ejemplo de config.py en las primeras versiones: si no se han elegido
+    # altavoces en el propio mando (settings.json), no se da por hecho ningún nombre.
+    if "ROOMS" not in d and list(getattr(cfg, "ROOMS", None) or []) == ["Comedor"]:
+        cfg.ROOMS = []
     if not getattr(cfg, "ROOMS", None):
-        cfg.ROOMS = [getattr(cfg, "ROOM", "Comedor")]
+        cfg.ROOMS = []
 
 
 def save(new):

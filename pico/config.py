@@ -1,6 +1,6 @@
 # config.py — lo único que tienes que editar.
 
-# La wifi se configura desde el móvil: la primera vez (o manteniendo la rueda pulsada 5 s
+# La wifi se configura desde el móvil: la primera vez (o manteniendo la rueda pulsada 4 s
 # -> Ajustes (wifi)) el mando crea su propia red (con clave, ver pantalla) y eliges tu wifi.
 # Lo que se guarda desde el móvil (wifi, volumen máximo) o desde el menú Altavoces manda
 # sobre este archivo.
@@ -11,7 +11,7 @@ AP_NAME = ""                         # red de configuración; vacío = "Knobeast
 SETUP_TIMEOUT = 900                  # segundos en modo configuración antes de reiniciarse sola
 
 # Habitaciones que controla la rueda, tal como salen en la app de Sonos. Se eligen desde
-# el mando: rueda pulsada 5 s -> Altavoces. Si pones varias, actúa sobre todas a la vez.
+# el mando: rueda pulsada 2 s y soltar. Si pones varias, actúa sobre todas a la vez.
 ROOMS = []               # vacío = se eligen desde el mando la primera vez
 MAX_VOLUME = 60         # la rueda nunca pasará de aquí
 VOL_STEP = 1            # puntos de volumen por cada clic de la rueda (también en la página de Ajustes)
@@ -22,7 +22,8 @@ ACTIONS = {
     "enc_long": None,           # mantener 1 s (pon "mute" si quieres silencio)
 }
 LONG_MS = 800
-MENU_MS = 5000          # mantener la rueda pulsada este tiempo abre el menú
+HOLD_ROOMS_MS = 2000    # mantener la rueda 2 s y soltar: elegir altavoces
+HOLD_MENU_MS = 4000     # seguir hasta 4 s: se abre el menú
 MENU_TIMEOUT = 15       # segundos sin tocar nada para cerrar el menú
 
 # Actualizaciones por internet. La edición comunidad (GitHub) no las tiene: se actualiza a mano.
@@ -37,7 +38,7 @@ AUTO_UPDATE = True      # buscar una vez al día, en reposo (también se cambia 
 LANG = "es"
 
 # Pantalla
-OLED_ROTATE_180 = True  # True = pines de la pantalla hacia el frente de la caja
+OLED_ROTATE_180 = True  # True = pines de la pantalla hacia el frente (borde bajo) de la caja
 SCREEN_DIM = 15         # segundos sin tocar hasta atenuar (0 = nunca). También en Sistema -> Atenuar
 SCREEN_OFF = 0          # segundos sin tocar hasta apagar (0 = nunca). También en Sistema -> Apagar
 SPLASH_TITLE = ""       # texto grande al arrancar; vacío = "knobeast"
@@ -53,12 +54,13 @@ ENC_REVERSE = False     # True si la rueda va al revés
 ENC_DIVIDER = 4         # transiciones por clic (4 en el KY-040; prueba 2 si va "a medias")
 
 # Batería: divisor de 2 resistencias de 100 kΩ entre VSYS y GND, con el punto medio en GP26 (pin 31).
-# Si no las pones, deja BATTERY_PIN = None y no se mostrará el porcentaje.
-BATTERY_PIN = None      # 26 cuando montes las resistencias
-BATTERY_RATIO = 2.0     # 100k + 100k -> la mitad de la tensión
 # Cargando: divisor desde IN+ del cargador (10k) a GP27 (pin 32) y 20k de GP27 a GND.
-# Con el USB-C enchufado, la pila de la pantalla sale con un rayo. None = no se muestra.
-CHARGE_PIN = None       # 27 cuando montes las resistencias
+# Con None el mando detecta solo si están las resistencias (GP26 y GP27). Si no las pones, no
+# se muestra nada. Pon otro número si las conectas a otro pin, o BATTERY_AUTO = False para no detectar.
+BATTERY_PIN = None      # None = automático (GP26)
+BATTERY_RATIO = 2.0     # 100k + 100k -> la mitad de la tensión
+CHARGE_PIN = None       # None = automático (GP27, si hay batería)
+BATTERY_AUTO = True
 
 # Consulta del estado del altavoz
 POLL_MS = 1000          # ciclo completo con la pantalla encendida

@@ -20,7 +20,7 @@ knobeast es una cajita con una **rueda grande** y una **pequeña pantalla** que 
 
 - **Gira** la rueda para cambiar el volumen, de 1 en 1.
 - **Pulsa** para pausar o reanudar.
-- **Mantén pulsado** para abrir el menú.
+- **Mantén pulsado** 2 s para elegir altavoces, 4 s para abrir el menú.
 - **La pantalla** muestra la habitación, el volumen y lo que suena.
 
 Es una forma **minimalista y física de controlar la música**, sin depender del móvil ni de una tablet. **Cualquiera de la familia** puede usarlo, también los niños, los abuelos o los invitados: nadie necesita la app, ni una cuenta, ni contraseñas.

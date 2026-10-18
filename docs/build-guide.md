@@ -13,13 +13,13 @@ This guide walks you through building a knobeast from scratch: parts, wiring, fl
 | Raspberry Pi Pico 2 W | With Wi-Fi. The firmware is written and tested for the Pico 2 W (RP2350) |
 | KY-040 rotary encoder | With push button. 6 mm “D” shaft (or knurled: change `shaft` in the `.scad`) |
 | 1.3" SH1106 OLED, I²C | The 4-pin one (VCC, GND, SCL, SDA), 128 × 64 |
-| 4 × M2 × 5 self-tapping screws | Hold the display from inside |
+| 2 × M2 × 5 self-tapping screws | Hold the display from inside |
 | 4 × M3 × 8 countersunk screws | Close the bottom lid |
 | 4 × Ø10 mm rubber feet | Optional |
 | Thin wire, soldering iron, solder | |
 
 **Battery version**
-- TP4056 USB-C charger (17 × 26 mm, HW-373 type, with protection);
+- TP4056 USB-C charger (17 × 26 mm, HW-373 type, with protection). **Pick one with the two 5.1 kΩ resistors on the USB-C CC pins** (marked «512» next to the connector): many HW-373 boards leave them out and then don't charge from USB-C-to-USB-C cables and chargers, only from USB-A-to-C;
 - 802540 LiPo, 1000 mAh;
 - KCD11 mini rocker switch (8.8 × 13.2 mm cut-out).
 
@@ -86,11 +86,11 @@ The charger's **IN+ / IN−** pads aren't used for power: power comes in through
 
 **Battery % (optional)**
 
-VSYS (pin 39) → 100 kΩ → **GP26 (pin 31)** → 100 kΩ → GND (pin 33). Set `BATTERY_PIN = 26` in `pico/config.py`.
+VSYS (pin 39) → 100 kΩ → **GP26 (pin 31)** → 100 kΩ → GND (pin 33). The firmware detects it by itself (since 2.0.3); nothing to change in `pico/config.py`.
 
 **Charging indicator (optional)**
 
-Charger **IN+** pad → 10 kΩ → **GP27 (pin 32)** → 20 kΩ → GND (pin 33). Set `CHARGE_PIN = 27` in `pico/config.py`. With USB-C plugged in, the battery icon shows a bolt.
+Charger **IN+** pad → 10 kΩ → **GP27 (pin 32)** → 20 kΩ → GND (pin 33). Detected by itself as well. With USB-C plugged in, the battery icon shows a bolt.
 
 ## 4. Test from a computer (optional)
 
@@ -134,7 +134,7 @@ Later, to copy only the firmware: `bash instalar_mac.sh --solo-programa`. To wat
 
 The setup password is created on first boot and never changes, so it can be printed on a sticker under the case.
 
-**Menu:** hold the dial for 5 s. Turn to choose, press to enter.
+**Speakers and menu:** hold the dial and a bar appears. Let go after **2 s** to pick speakers; keep holding to **4 s** for the menu. Turn to choose, press to enter; the menu ends with *Back*.
 - **Speakers:** tick one or more speakers or groups and press **Save**.
   - **G1, G2…:** rooms grouped in Sonos.
   - **?:** selected, but not visible right now.
@@ -206,7 +206,7 @@ In the `.scad` you can also change the tilt (`theta`), add a label on the face (
 
 ![Inside](img/case_cutaway.png)
 
-1. **Display:** into its frame, glass towards the window and pins towards the knob. Screw it from inside with the 4 M2 × 5 screws and tighten gently.
+1. **Display:** glass towards the window, **pins and wires towards the knob**, wires out through the gap in the frame. Tilt it and slide the pin edge under the two tabs at the corners, lower the other edge onto the two posts and fix it with the 2 M2 × 5 screws. Tighten gently: it must go in without force.
 2. **Encoder:** shaft through its hole, with the KY-040 pins pointing right. Fix it with its nut from outside and press the knob on.
 3. **Switch:** press it into the cut-out at the back.
 4. **Bottom lid:**
